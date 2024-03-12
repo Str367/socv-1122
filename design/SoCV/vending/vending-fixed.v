@@ -295,10 +295,10 @@ always @ (posedge clk) begin
       coinOutNTD_1      <= 3'd0;
       itemTypeOut       <= `ITEM_NONE;
       serviceTypeOut    <= `SERVICE_ON;
-      countNTD_50       <= 3'd7;
-      countNTD_10       <= 3'd7;
-      countNTD_5        <= 3'd7;
-      countNTD_1        <= 3'd7;
+      countNTD_50       <= 3'd2;
+      countNTD_10       <= 3'd2;
+      countNTD_5        <= 3'd2;
+      countNTD_1        <= 3'd2;
       insertedNTD_50    <= 2'd0;
       insertedNTD_10    <= 2'd0;
       insertedNTD_5     <= 2'd0;
