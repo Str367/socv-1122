@@ -1,0 +1,14 @@
+digraph {
+   node [shape = plaintext];
+   4 -> 3 -> 2 -> 1 -> 0 [style = invis];
+   { rank = source; "restrict(A,B)"; }
+   node [shape = ellipse];
+   "restrict(A,B)" -> "0x5edadbe899a0" [color = blue];
+   { rank = same; 4; "0x5edadbe899a0"; }
+   "0x5edadbe899a0" -> "0x5edadbe888a0";
+   "0x5edadbe899a0" -> "One"[style = dotted ] [color=red] [arrowhead=odot]
+   { rank = same; 3; "0x5edadbe888a0"; }
+   "0x5edadbe888a0" -> "One";
+   "0x5edadbe888a0" -> "One"[style = dotted ] [color=red] [arrowhead=odot]
+   { rank = same; 0; "One"; }
+}

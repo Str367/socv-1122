@@ -1,0 +1,8 @@
+digraph {
+   node [shape = plaintext];
+   0 [style = invis];
+   { rank = source; "conjunction result"; }
+   node [shape = ellipse];
+   "conjunction result" -> "One" [color = blue] [arrowhead = odot]
+   { rank = same; 0; "One"; }
+}

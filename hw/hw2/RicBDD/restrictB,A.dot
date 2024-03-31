@@ -1,0 +1,14 @@
+digraph {
+   node [shape = plaintext];
+   6 -> 5 -> 4 -> 3 -> 2 -> 1 -> 0 [style = invis];
+   { rank = source; "buildBDD(o2,1,false)"; }
+   node [shape = ellipse];
+   "buildBDD(o2,1,false)" -> "0x57fb874109d0" [color = blue];
+   { rank = same; 6; "0x57fb874109d0"; }
+   "0x57fb874109d0" -> "0x57fb8740f940";
+   "0x57fb874109d0" -> "One"[style = dotted ] [color=red] [arrowhead=odot]
+   { rank = same; 1; "0x57fb8740f940"; }
+   "0x57fb8740f940" -> "One";
+   "0x57fb8740f940" -> "One"[style = dotted ] [color=red] [arrowhead=odot]
+   { rank = same; 0; "One"; }
+}

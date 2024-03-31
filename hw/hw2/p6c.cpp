@@ -73,52 +73,24 @@ main()
    // cout << "g8" << endl;
    // cout << g8 << endl;
 
-   BddNode g9 = g8 & f;
+   BddNode g9 = g8 & g5 & f;
    // cout << "g9" << endl;
    // cout << g9 << endl;
-   ofstream ofile("g9.dot");
-   g9.drawBdd("g9", ofile);
-   system("dot -o g9.png -Tpng g9.dot");
 
    // g5 == 1: b & d | ~c & e
-   // BddNode g9_g5 = g9.getLeftCofactor(2).getLeftCofactor(4) | g9.getLeftCofactor(5).getRightCofactor(3);
+   BddNode g9_g5 = g9.getLeftCofactor(2).getLeftCofactor(4) | g9.getLeftCofactor(5).getRightCofactor(3);
    // g5 == 0: (~b | ~d) & (c | ~e) = (~b & c) | (~b & ~e) | (~d & c) | (~d & ~e)
-   // BddNode g9_ng5 = g9.getRightCofactor(2).getLeftCofactor(3) | g9.getRightCofactor(2).getRightCofactor(5) | g9.getRightCofactor(4).getLeftCofactor(3) | g9.getRightCofactor(4).getRightCofactor(5);
-   // BddNode g9_dg5 = g9_g5 ^ g9_ng5;
+   BddNode g9_ng5 = g9.getRightCofactor(2).getLeftCofactor(3) | g9.getRightCofactor(2).getRightCofactor(5) | g9.getRightCofactor(4).getLeftCofactor(3) | g9.getRightCofactor(4).getRightCofactor(5);
+   BddNode g9_dg5 = g9_g5 ^ g9_ng5;
+   
+   cout << "g9_dg5" << endl;
+   cout << g9_dg5 << endl;
 
    // cout << "g9_g5" << endl;
    // cout << g9_g5 << endl;
    // cout << "g9_dg5" << endl;
    // cout << g9_dg5 << endl;
-   // BddNode A = b & c & d;
-   // BddNode B = g3 & g6;
-   // cout << "restrict(B,A)" << endl;
-   // cout << B.restrict(A) << endl;
-   // ofstream ofile("restrictB,A.dot");
-   // (a & f).restrict(A).drawBdd("buildBDD(o2,1,false)", ofile);
-   // system("dot -o restrictB,A.png -Tpng restrictB,A.dot");
-   // ofstream ofile2("g7.dot");
-   // g7.drawBdd("g7", ofile2);
-   // system("dot -o g7.png -Tpng g7.dot");
-   // cout << g7.getRightCofactor(5) <<endl;
-   // cout << "test" << endl;
-   // cout << test << endl;
-   // cout << (g4 == test) << endl;
-   // cout << BddNode::_one.restrict(g4) << endl;
-   // BddNode g9_dg5_c = ~f | (~a & ~c);
-   // BddNode res = g9_dg5_c & g9_dg5;
 
-   // ofstream ofile("g9_dg5.dot");
-   // g9_dg5.drawBdd("Dff(g9|g5)", ofile);
-   // system("dot -o g9_dg5.png -Tpng g9_dg5.dot");
-
-   // ofstream ofile2("g9_dg5_c.dot");
-   // g9_dg5_c.drawBdd("~f|(~a&~c)", ofile2);
-   // system("dot -o g9_dg5_c.png -Tpng g9_dg5_c.dot");
-
-   // ofstream ofile3("res.dot");
-   // res.drawBdd("conjunction result", ofile3);
-   // system("dot -o res.png -Tpng res.dot");
    // cout << "g5.getLeftCofactor(2)" << endl;
    // cout << g5.getLeftCofactor(2) << endl;
    // cout << "g5.getRightCofactor(2)" << endl;
@@ -126,9 +98,9 @@ main()
    // cout << g5._one << endl;
    // cout << g5._zero << endl;
 
-   // ofstream fStream;
-   // fStream.open("p6c.out");
-   // fStream << "g9_dg5" << endl << g9_dg5 << endl << endl;
+   ofstream fStream;
+   fStream.open("p6c.out");
+   fStream << "g9_dg5" << endl << g9_dg5 << endl << endl;
    // fStream << "g1" << endl << g1 << endl << endl;
    // fStream << "g2" << endl << g2 << endl << endl;
    // fStream << "g3" << endl << g3 << endl << endl;
