@@ -339,3 +339,28 @@ bool BddMgrV::drawBdd(const string& name, const string& fileName) const {
 
     return true;
 }
+
+
+/// implementation of restrict
+
+BddNodeV
+BddMgrV::restrict(const BddNodeV& f,const BddNodeV& c)
+{
+    if(c == BddNodeV::_zero){
+        cerr << "Error: " << endl;
+        return BddNodeV::_zero;
+    }
+    if(c == BddNodeV::_one || f == BddNodeV::_zero || f == BddNodeV::_one)
+        return f;
+    //a = c.root
+    int a = c.getLevel();
+    if(c.getRightCofactor(a) == BddNodeV::_zero)
+        return restrict(f.getLeftCofactor(a), c.getLeftCofactor(a));
+    if(c.getLeftCofactor(a) == BddNodeV::_zero)
+        return restrict(f.getRightCofactor(a), c.getRightCofactor(a));
+    if(f.getLeftCofactor(a) == f.getRightCofactor(a))
+        return restrict(f, c.getLeftCofactor(a) | c.getRightCofactor(a));
+
+    return ((~getSupport(a)) & restrict(f.getRightCofactor(a), c.getRightCofactor(a))) |
+    ((getSupport(a)) & restrict(f.getLeftCofactor(a), c.getLeftCofactor(a)));
+}
