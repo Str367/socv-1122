@@ -149,8 +149,8 @@ void SATMgr::itpUbmc(const CirGate *monitor, SatProofRes &pRes) {
     //    mark them to onset/offset carefully
     //    ( ex. addedBoundedVerifyData(), assertProperty() are called )
     //    gvSatSolver->IteratentkData();
-   for(unsigned k = 1, kmax = pRes.getMaxDepth(); k < kmax; ++k)
-   {
+    for(unsigned k = 1, kmax = pRes.getMaxDepth(); k < kmax; ++k)
+    {
         gvSatSolver -> addBoundedVerifyData(monitor, k);
         gvSatSolver -> assumeRelease();
         gvSatSolver -> assumeProperty(monitor, false, k);
