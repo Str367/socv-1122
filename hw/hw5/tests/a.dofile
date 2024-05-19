@@ -1,0 +1,13 @@
+cirread -v ./design/SoCV/basic/a.v
+set sys vrf
+satv itp -o 0
+usage
+satv itp -o 1
+usage
+satv itp -o 2
+usage
+satv itp -o 3
+usage
+satv itp -o 4
+usage
+quit -f

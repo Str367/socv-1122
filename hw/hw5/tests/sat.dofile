@@ -1,0 +1,6 @@
+# Please change the file name below
+cirread -aig ./design/SoCV/hwmcc/bobpci215.aig
+set sys vrf
+satv itp -o 0
+usage
+quit -f
