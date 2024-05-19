@@ -186,7 +186,7 @@ void SATMgr::itpUbmc(const CirGate *monitor, SatProofRes &pRes) {
                 
                 gvSatSolver->assertProperty(monitor, true, k);
                 for(unsigned j = num_clauses; j < getNumClauses(); ++j){ //thank you = =
-                markOffsetClause(j);
+                    markOffsetClause(j);
                 }
                 num_clauses = getNumClauses();
                 // cout<<"SAT@loop = "<<loop<<", k++ "<<endl;
@@ -215,6 +215,8 @@ void SATMgr::itpUbmc(const CirGate *monitor, SatProofRes &pRes) {
             R = R_prime;
         }
     }
+
+    
     return;
 }
 
