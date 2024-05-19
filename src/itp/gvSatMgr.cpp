@@ -73,7 +73,6 @@ void SATMgr::indBmc(const CirGate *monitor, SatProofRes &pRes) {
     uint32_t i = 0;
     // GVNetId  I = buildInitState();
     CirGate *I = buildInitState();
-
     gvSatSolver->addBoundedVerifyData(I, i);
     gvSatSolver->assertProperty(I, false, i);
     // Start Bounded Model Checking
@@ -96,20 +95,17 @@ void SATMgr::itpUbmc(const CirGate *monitor, SatProofRes &pRes) {
     GVSatSolver *gvSatSolver = pRes.getSatSolver();
     bind(gvSatSolver);
 
-    size_t num_clauses = getNumClauses();
+    size_t num_clauses = getNumClauses(),size = 0;
     bool proved        = false;
     gvSatSolver->assumeRelease();
     // GVNetId S, R, R_prime, tmp1, tmp2, tmp3, tmp4;
     CirGate *S;
     CirGate *R;
     CirGate *R_prime;
-    CirGate *tmp1;
-    CirGate *tmp2;
-    CirGate *tmp3;
-    CirGate *tmp4;
-    CirGate *tmp5;
+    CirGate *isfixed;
 
     // TODO : finish your own Interpolation-based property checking
+
 
     // PART I:
     // Build Initial State
@@ -119,15 +115,107 @@ void SATMgr::itpUbmc(const CirGate *monitor, SatProofRes &pRes) {
     //    Check if monitor is violated at timeframe 0
     //    Build the whole timeframe 0 and map the var to latch net
     //    Mark the added clauses ( up to now ) to onset
+    gvSatSolver->addBoundedVerifyData(I, 0);
+    gvSatSolver->addBoundedVerifyData(monitor, 0);
+    // cout<< "num of clauses after addboundedverifydata: "<< getNumClauses()<<endl;
+    gvSatSolver->assumeProperty(I, false, 0); //to test if the initial state is valid, set assume instead of assert(assert on after it's checked)
+    // cout<< "num of clauses after assumeProperty I: "<< getNumClauses()<<endl;
+    gvSatSolver->assumeProperty(monitor, false, 0);
+    // cout<< "num of clauses after assumeProperty monitor: "<< getNumClauses()<<endl;
+    gvSatSolver->simplify();
+    if(gvSatSolver->assump_solve()){ // SAT @ 0 => found cex @ 0
+        pRes.setFired(0);
+        return;
+    }
+    gvSatSolver->assertProperty(monitor, true, 0); // UNSAT @ 0 => add monitor to the solver
+    for(unsigned i = 0, j = _cirMgr->getNumLATCHs(); i<j; ++i){
+        CirGate* RegOut = _cirMgr->getRo(i);
+        gvSatSolver->addBoundedVerifyData(RegOut, 1);
+        mapVar2Net(gvSatSolver->getVerifyData(RegOut, 1), RegOut);
+        // mapVar2Net(gvSatSolver->getVerifyData(RegIn, 1), RegIn);
+    }
+    for(unsigned i = 0, j = getNumClauses(); i < j; ++i){
+        markOnsetClause(i);
+    }
+    num_clauses = getNumClauses();
+    // cout<< "num of clauses after assertProperty monitor: "<< getNumClauses()<<endl;
 
     // PART III:
     // Start the ITP verification loop
-    // Perform BMC
+    // Perform BMC 
     //    SAT  -> cex found
     //    UNSAT-> start inner loop to compute the approx. images
-    //    Each time the clauses are added to the solver,
+    //    Each time the clauses are added to the solver, 
     //    mark them to onset/offset carefully
     //    ( ex. addedBoundedVerifyData(), assertProperty() are called )
+    //    gvSatSolver->IteratentkData();
+   for(unsigned k = 1, kmax = pRes.getMaxDepth(); k < kmax; ++k)
+   {
+        gvSatSolver -> addBoundedVerifyData(monitor, k);
+        gvSatSolver -> assumeRelease();
+        gvSatSolver -> assumeProperty(monitor, false, k);
+        gvSatSolver -> assumeProperty(I, false, 0);
+        gvSatSolver -> simplify();
+        
+        if(gvSatSolver -> assump_solve())
+        {
+            pRes.setFired(k);
+            break;
+        }
+
+        markOffsetClause(num_clauses);
+        num_clauses = getNumClauses();
+
+        // UNSAT @ k => use interpolation to find new R
+        // cout << "UNSAT@" << k << ", start computing interpolation" << endl;
+        
+        R = I;
+        S = getItp(); // use getItp() instead of I can speed up the process(duplicate operation)
+        for(unsigned loop = 0, loopmax = pRes.getMaxDepth(); loop < loopmax; ++loopmax){
+            gvSatSolver -> assumeRelease();
+            gvSatSolver -> addBoundedVerifyData(S, 0);
+            gvSatSolver -> assumeProperty(S, false, 0);
+            for(unsigned j = num_clauses; j < getNumClauses(); ++j) markOnsetClause(j);
+            num_clauses = getNumClauses();
+
+            gvSatSolver -> assumeProperty(monitor, false, k);
+            gvSatSolver->simplify();
+
+            // Assumption Solver: If SAT, disproved!
+            if(gvSatSolver->assump_solve()) {
+                
+                gvSatSolver->assertProperty(monitor, true, k);
+                for(unsigned j = num_clauses; j < getNumClauses(); ++j){ //thank you = =
+                markOffsetClause(j);
+                }
+                num_clauses = getNumClauses();
+                // cout<<"SAT@loop = "<<loop<<", k++ "<<endl;
+                break;
+            }
+            else num_clauses = getNumClauses();
+            
+            S = getItp();
+            R_prime = _cirMgr -> createOrGate(R, S);
+            isfixed = _cirMgr -> createXorGate(R,R_prime);
+            gvSatSolver -> resizeNtkData(10);
+                    
+            gvSatSolver -> addBoundedVerifyData(isfixed, 0);
+            for(unsigned i = num_clauses, j = getNumClauses(); i<j; ++i) markOnsetClause(i);
+            num_clauses = getNumClauses();
+            
+            gvSatSolver -> assumeRelease();
+            gvSatSolver -> assumeProperty(isfixed, false, 0); // check R == R_prime (R^R_prime == 0)
+            gvSatSolver -> simplify();
+            if(!gvSatSolver -> assump_solve()) {// UNSAT
+                // cout << "UNSAT@loop = " << loop << ", fixed and UNSAT" << endl;
+                pRes.setProved(k);
+                proved = true;
+                return;
+            }
+            R = R_prime;
+        }
+    }
+    return;
 }
 
 void SATMgr::bind(GVSatSolver *ptrMinisat) {
@@ -394,9 +482,78 @@ void SATMgr::retrieveProof(Reader &rdr, vector<unsigned int> &clausePos, vector<
 
 CirGate *SATMgr::buildInitState() const {
     // TODO: build initial state
-    CirAigGate *I;
+    // CirAigGate *I;
+    // _cirMgr->writeGate(cout, _cirMgr->_const0);
+    // for(unsigned i = 0; i < _cirMgr->getNumPIs(); ++i){
+    //     cout << "PI: " << _cirMgr->getPi(i)->getGid() << endl;}
+    CirGate *I;
+    I = _cirMgr->createAndGate(_cirMgr->createNotGate(_cirMgr->getRo(0)), _cirMgr->createNotGate(_cirMgr->getRo(1)));
+    for(unsigned i = 2, j = _cirMgr->getNumLATCHs(); i<j; ++i){
+        CirGate* invRegOut = _cirMgr->createNotGate(_cirMgr->getRo(i));
+        I = _cirMgr->createAndGate(I, invRegOut);
+    }
+    // cout<<I->getGid()<<endl;
+    // _cirMgr->writeGate(cout, I);
+    _ptrMinisat->resizeNtkData(_cirMgr->getNumTots());
+    // CirGate* r0 = _cirMgr->getRo(0);
+    // _cirMgr->createAig(_cirMgr->getNumTots(), r0->getGid(), true, _cirMgr->_const1->getGid(), false);
+    // I = _cirMgr->getAig(_cirMgr->getNumAIGs() - 1);
+    // cout<<"i: 0"<< endl;
+    // _cirMgr->writeGate(cout, I);
+    // for(unsigned i = 1, j = _cirMgr->getNumLATCHs(); i<j ; ++i){
+    //     CirRoGate* regOutput = _cirMgr->getRo(i);    
+    //     _cirMgr->createAig(_cirMgr->getNumTots(), regOutput->getGid(), true, I->getGid(), false);
+    //     // _cirMgr->createAig(_cirMgr->getNumTots(), latch->getIn0Gate()->getGid(), !(latch->getIn0().isInv()), I->getGid(), I->getIn0().isInv());
+    //     I = _cirMgr->getAig(_cirMgr->getNumAIGs() - 1);
+    //     cout<<"i: "<< i << endl;
+    //     _cirMgr->writeGate(cout, I);
+    // }
+
+    // for(unsigned i = 0, j = _cirMgr->getNumPIs();i<j;++i) cout<<_cirMgr->getPi(i)->getGid()<<endl;
+    // cout<<endl;
+    // for(unsigned i = 0, j = _cirMgr->getNumPOs();i<j;++i) cout<<_cirMgr->getPo(i)->getGid()<<endl;
+    // cout<<endl;
+    // for(unsigned i = 0, j = _cirMgr->getNumLATCHs();i<j;++i) cout<<_cirMgr->getRi(i)->getGid()<<endl;
+    // cout<<endl;
+    // for(unsigned i = 0, j = _cirMgr->getNumLATCHs();i<j;++i) cout<<_cirMgr->getRo(i)->getGid()<<endl;
+    // cout<<endl;
+    // for(unsigned i = 0, j = _cirMgr->getNumAIGs();i<j;++i) cout<<_cirMgr->getAig(i)->getGid()<<endl;
+    // cout<<endl;
+    // cout<<_cirMgr->_const1->getGid()<<endl;
+    // cout<<_cirMgr->getNumTots()<<endl<<endl;
+
+    // _cirMgr->writeGate(cout, _cirMgr->getGate(_cirMgr->getNumTots() - 1));
+
+    // CirRoGate *test1 = _cirMgr->getRo(0), *test2 = _cirMgr->getRo(1);
+    // _cirMgr->createAig(_cirMgr->getNumTots(), test1->getGid(), false, _cirMgr->_const1->getGid(), false);
+    // CirAigGate* test3 = _cirMgr->getAig(_cirMgr->getNumAIGs() - 1);
+    // CirRoGate *test4 = _cirMgr->getRo(2);
+    // _cirMgr->createAig(_cirMgr->getNumTots(), test4->getGid(), false, test3->getGid(), false);
+    // CirAigGate* test5 = _cirMgr->getAig(_cirMgr->getNumAIGs() - 1);
+    // _cirMgr->writeGate(cout, test5);
+
+    // for(unsigned i = 0, j = _cirMgr->getNumAIGs();i<j;++i) cout<<_cirMgr->getAig(i)->getGid()<<endl;
+
+    // I = _cirMgr->getAig(_cirMgr->getNumAIGs() - 1); //I is now the last AIG and also const1
+    // for(unsigned i = 0, j = _cirMgr->getNumLATCHs(); i<j ; ++i){
+    //     CirRoGate* regOutput = _cirMgr->getRo(i);
+        
+    //     _cirMgr->createAig(_cirMgr->getNumTots(), regOutput->getGid(), true, I->getGid(), false);
+    //     // _cirMgr->createAig(_cirMgr->getNumTots(), latch->getIn0Gate()->getGid(), !(latch->getIn0().isInv()), I->getGid(), I->getIn0().isInv());
+    //     I = _cirMgr->getAig(_cirMgr->getNumAIGs() - 1);
+    //     cout<<"i: "<< i << endl;
+    //     _cirMgr->writeGate(cout, I);
+    // }
+    // cout<<"InitState built"<<endl;
+    // _cirMgr->writeGate(os, test1);
+    // _cirMgr->writeGate(os, test2);
+    // _cirMgr->writeGate(os, test3);
+    // _cirMgr->writeGate(os, I);
+    // cout<<"seperate line"<<endl;
+    // _cirMgr->writeGate(os, _cirMgr->_const1);
+    // cout<<"esh0"<<endl;
     
-    return I;
+    return I; // I should be the AND of all the inverse of latch inputs
 }
 
 // build the McMillan Interpolant
@@ -434,6 +591,7 @@ CirGate *SATMgr::buildItp(const string &proofName) const {
                     idx += tmp;
                 }
                 if (_varGroup[idx >> 1] == COMMON) {
+                    // cout<<"finding: "<<(idx>>1)<<endl;
                     assert(_var2Net.find(idx >> 1) != _var2Net.end());
                     nId  = (_var2Net.find(idx >> 1))->second;
                     nId1 = (_var2Net.find(idx >> 1))->second;

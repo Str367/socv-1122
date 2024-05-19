@@ -59,6 +59,16 @@ public:
     void addBoundedVerifyData(const CirGate*, const uint32_t&);
     const bool existVerifyData(const CirGate*, const uint32_t&);
     void resizeNtkData(const uint32_t& num);
+    void IteratentkData(){
+        for (uint32_t i = 0; i < _cirMgr->getNumTots(); ++i) {
+            cout << "Gate " << i << " : ";
+            for (uint32_t j = 0; j < _ntkData[i].size(); ++j) {
+                cout << _ntkData[i][j] << " ";
+            }
+            cout << endl;
+        }
+    
+    }
 
 private:
     const Var newVar();
