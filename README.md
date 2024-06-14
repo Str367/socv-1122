@@ -11,6 +11,7 @@
 - FCompare 
 - FReport
 - FDraw
+- FSetvar
 - F2B
 - B2F
 
