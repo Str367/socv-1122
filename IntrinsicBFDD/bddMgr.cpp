@@ -528,15 +528,11 @@ BddMgr::Bdd2Fdd(const BddNode& n){
    // cout<<"enter Bdd2Fdd"<<endl;
    // cout<<"n: "<<endl<<n<<endl;
    if(n == BddNode::_zero){
-      cout<<"n==0"<<endl;
       return FddNode::_zero; 
    }
-   cout<<"n!=0"<<endl;
    if(n == BddNode::_one){
-      cout<<"n==1"<<endl;
       return FddNode::_one;
    }
-   cout<<"n!=1"<<endl;
    BddNode bl = n.getLeft(),
            br = n.getRight();
 
@@ -544,9 +540,6 @@ BddMgr::Bdd2Fdd(const BddNode& n){
            fr = Bdd2Fdd(br);
    FddNode fd = fl^fr;
    if(n.isNegEdge()) fr = ~fr;
-   cout<<"fl: "<<endl<<fl<<endl;
-   cout<<"fd: "<<endl<<fd<<endl;
-   cout<<"fr: "<<endl<<fr<<endl;
    if(fd == FddNode::_zero) return fr;
 
    unsigned v = n.getLevel();
