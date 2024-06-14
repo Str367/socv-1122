@@ -125,6 +125,8 @@ public:
     void initCir(const int&, const int&, const int&, const int&);
     void buildBdd(CirGate*);
     void buildNtkBdd();
+    // void buildFdd(CirGate*);
+    // void buildNtkFdd();
     void addTotGate(CirGate* gate) { _totGateList.push_back(gate); };
     const bool readCirFromAbc(string, FileType);
     const bool readBlif(const string&) const;

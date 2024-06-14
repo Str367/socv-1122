@@ -1,7 +1,8 @@
-cirread ./design/SoCV/basic/a.v
-breset 2000 8009 30011
+cirread -aig ./design/SoCV/hwmcc/pj2018.aig
+breset 20000 80090 70011
 bsetorder -file
 bconstruct -all
+cirprint -PO
 set system vrf
 pinit init
 ptrans tri tr

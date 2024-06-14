@@ -21,6 +21,7 @@ using namespace std;
 
 class BddMgrV;
 class BddNodeVInt;
+class FddNodeV;
 
 enum BDD_EDGEV_FLAG {
     BDD_POS_EDGEV = 0,
@@ -46,6 +47,8 @@ public:
     BddNodeV(BddNodeVInt* n, BDD_EDGEV_FLAG f = BDD_POS_EDGEV);
     //
     BddNodeV(size_t v);
+    // get bdd from fdd
+    BddNodeV(const FddNodeV& n);
     // Destructor is the only place to decrease _refCount
     ~BddNodeV();
 

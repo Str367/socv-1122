@@ -35,7 +35,11 @@ static void swapBddNodeV(BddNodeV& f, BddNodeV& g) {
     f            = g;
     g            = tmp;
 }
-
+static void swapFddNodeV(FddNodeV& f, FddNodeV& g) {
+    FddNodeV tmp = f;
+    f            = g;
+    g            = tmp;
+}
 //----------------------------------------------------------------------
 //    helper functions
 //----------------------------------------------------------------------
@@ -47,6 +51,14 @@ BddNodeV getBddNodeV(const string& bddName) {
     else  // bddNameis a name
         return bddMgrV->getBddNodeV(bddName);
 }
+FddNodeV getFddNodeV(const string& bddName) {
+    int id;
+    // if (v3Str2Int(bddName, id))  // bddName is an ID
+    if (myStr2Int(bddName, id))  // bddName is an ID
+        return bddMgrV->getFddNodeV(id);
+    else  // bddNameis a name
+        return bddMgrV->getFddNodeV(bddName);
+}
 
 //----------------------------------------------------------------------
 //    class BddMgrV
@@ -56,19 +68,29 @@ BddNodeV getBddNodeV(const string& bddName) {
 //
 void BddMgrV::init(size_t nin, size_t h, size_t c) {
     reset();
-    _uniqueTable.init(h);
-    _computedTable.init(c);
+   _uniqueTable.init(h);
+   _fdduniqueTable.init(h);
+   _computedTable.init(c);
+   _fddcomputedTable.init(c);
 
     // This must be called first
     BddNodeV::setBddMgrV(this);
+    FddNodeV::setBddMgrV(this);
     BddNodeVInt::_terminal = uniquify(0, 0, 0);
+    FddNodeVInt::_terminal = fdduniquify(0, 0, 0);
     BddNodeV::_one         = BddNodeV(BddNodeVInt::_terminal, BDD_POS_EDGEV);
     BddNodeV::_zero        = BddNodeV(BddNodeVInt::_terminal, BDD_NEG_EDGEV);
+    FddNodeV::_one         = FddNodeV(FddNodeVInt::_terminal, FDD_POS_EDGE);
+    FddNodeV::_zero        = FddNodeV(FddNodeVInt::_terminal, FDD_NEG_EDGE);
 
     _supports.reserve(nin + 1);
     _supports.push_back(BddNodeV::_one);
-    for (size_t i = 1; i <= nin; ++i)
+    _fddsupports.reserve(nin + 1);
+    _fddsupports.push_back(FddNodeV::_one);
+    for (size_t i = 1; i <= nin; ++i){
         _supports.push_back(BddNodeV(BddNodeV::_one(), BddNodeV::_zero(), i));
+        _fddsupports.push_back(FddNodeV(FddNodeV::_one(), FddNodeV::_zero(), i));
+    }
 }
 
 // Called by the BSETOrder command
@@ -83,13 +105,21 @@ void BddMgrV::restart() {
 // This is a private function called by init() and restart()
 void BddMgrV::reset() {
     _supports.clear();
+    _fddsupports.clear();
     _bddArr.clear();
+    _fddArr.clear();
     _bddMap.clear();
+    _fddMap.clear();
     BddHash::iterator bi = _uniqueTable.begin();
     for (; bi != _uniqueTable.end(); ++bi)
         delete (*bi).second;
+    FddHash::iterator fi = _fdduniqueTable.begin();
+    for (; fi != _fdduniqueTable.end(); ++fi)
+        delete (*fi).second;
     _uniqueTable.reset();
+    _fdduniqueTable.reset();
     _computedTable.reset();
+    _fddcomputedTable.reset();
 }
 
 // [Note] Remeber to check "isNegEdge" when return BddNodeV!!!!!
@@ -233,6 +263,24 @@ BddMgrV::uniquify(size_t l, size_t r, unsigned i) {
     return n;
 }
 
+
+// Check if triplet (l, r, i) is in _fdduniqueTable,
+// If not, create a new node;
+// else, return the hashed one
+//
+FddNodeVInt*
+BddMgrV::fdduniquify(size_t l, size_t r, unsigned i)
+{
+   // TODO
+   FddNodeVInt* n = 0;
+   BddHashKeyV k(l, r, i);
+   if (!_fdduniqueTable.check(k, n)) {
+      n = new FddNodeVInt(l, r, i);
+      _fdduniqueTable.forceInsert(k, n);
+   }
+   return n;
+}
+
 // return false if _bddArr[id] has aleady been inserted
 bool BddMgrV::addBddNodeV(unsigned id, size_t n) {
     if (id >= _bddArr.size()) {
@@ -245,6 +293,18 @@ bool BddMgrV::addBddNodeV(unsigned id, size_t n) {
     _bddArr[id] = n;
     return true;
 }
+// return false if _bddArr[id] has aleady been inserted
+bool BddMgrV::addFddNodeV(unsigned id, size_t n) {
+    if (id >= _fddArr.size()) {
+        unsigned origSize = _fddArr.size();
+        _fddArr.resize(id + 1);
+        for (unsigned i = origSize; i < _fddArr.size(); ++i)
+            _fddArr[i] = 0;
+    } else if (_fddArr[id] != 0)
+        return false;
+    _fddArr[id] = n;
+    return true;
+}
 
 // return 0 if not in the map!!
 BddNodeV
@@ -253,14 +313,28 @@ BddMgrV::getBddNodeV(unsigned id) const {
         return size_t(0);
     return _bddArr[id];
 }
+// return 0 if not in the map!!
+FddNodeV
+BddMgrV::getFddNodeV(unsigned id) const {
+    if (id >= _fddArr.size())
+        return size_t(0);
+    return _fddArr[id];
+}
 
 // return false if str is already in the _bddMap!!
 bool BddMgrV::addBddNodeV(const string& str, size_t n) {
     return _bddMap.insert(BddMapPair(str, n)).second;
 }
+// return false if str is already in the _bddMap!!
+bool BddMgrV::addFddNodeV(const string& str, size_t n) {
+    return _fddMap.insert(BddMapPair(str, n)).second;
+}
 
 void BddMgrV::forceAddBddNodeV(const string& str, size_t n) {
     _bddMap[str] = n;
+}
+void BddMgrV::forceAddFddNodeV(const string& str, size_t n) {
+    _fddMap[str] = n;
 }
 
 // return 0 if not in the map!!
@@ -268,6 +342,13 @@ BddNodeV
 BddMgrV::getBddNodeV(const string& name) const {
     BddMapConstIter bi = _bddMap.find(name);
     if (bi == _bddMap.end()) return size_t(0);
+    return (*bi).second;
+}
+// return 0 if not in the map!!
+FddNodeV
+BddMgrV::getFddNodeV(const string& name) const {
+    BddMapConstIter bi = _fddMap.find(name);
+    if (bi == _fddMap.end()) return size_t(0);
     return (*bi).second;
 }
 
@@ -340,6 +421,23 @@ bool BddMgrV::drawBdd(const string& name, const string& fileName) const {
     return true;
 }
 
+bool BddMgrV::drawFdd(const string& name, const string& fileName) const {
+    FddNodeV node = ::getFddNodeV(name);
+    if (node() == 0) {
+        cerr << "Error: \"" << name << "\" is not a legal BDD node!!" << endl;
+        return false;
+    }
+
+    ofstream ofile(fileName.c_str());
+    if (!ofile) {
+        cerr << "Error: cannot open file \"" << fileName << "\"!!" << endl;
+        return false;
+    }
+
+    node.drawFdd(name, ofile);
+
+    return true;
+}
 
 /// implementation of restrict
 
@@ -363,4 +461,174 @@ BddMgrV::restrict(const BddNodeV& f,const BddNodeV& c)
 
     return ((~getSupport(a)) & restrict(f.getRightCofactor(a), c.getRightCofactor(a))) |
     ((getSupport(a)) & restrict(f.getLeftCofactor(a), c.getLeftCofactor(a)));
+}
+
+
+//implementation for FDD operations
+
+
+FddNodeV
+BddMgrV::fddNot(const FddNodeV& f)
+{
+   if(f == FddNodeV::_one) return FddNodeV::_zero;
+   if(f == FddNodeV::_zero) return FddNodeV::_one;
+   size_t ret;
+   unsigned v = f.getLevel();
+   FddNodeV l = f.getLeft();
+   FddNodeV r = f.getRight();
+
+   if(r == FddNodeV::_one) r = FddNodeV::_zero;
+   else if(r == FddNodeV::_zero) r = FddNodeV::_one;
+   else r = fddNot(r);
+
+   if(l == FddNodeV::_zero) return r;
+
+   ret = size_t(fdduniquify(l(), r(), v));
+   return ret;
+}
+
+FddNodeV
+BddMgrV::fddXor(const FddNodeV& f, const FddNodeV& g)
+{
+   // cout<<endl<< f.getLevel() << " " << g.getLevel()<<endl;
+
+   if(f == FddNodeV::_zero) {
+      // cout << "f == 0" << endl;
+      return g;
+   }
+   // cout << "f != 0" << endl;
+   if(g == FddNodeV::_zero) {
+      // cout << "g == 0" << endl;
+      return f;
+   }
+   // cout << "g != 0" << endl;
+   if(f == FddNodeV::_one) {
+      // cout << "f == 1" << endl;
+      return ~g;
+   }
+   // cout << "f != 1" << endl;
+   if(g == FddNodeV::_one) {
+      // cout << "g == 1" << endl;
+      return ~f;
+   }
+   // cout << "g != 1" << endl;
+
+   
+   unsigned v = f.getLevel() > g.getLevel() ? f.getLevel() : g.getLevel();
+   // cout<<"test"<<endl;
+   FddNodeV fl = (v == f.getLevel())? f.getLeft():FddNodeV::_zero,
+            gl = (v == g.getLevel())? g.getLeft():FddNodeV::_zero;
+   FddNodeV  l = fddXor(fl, gl);
+   FddNodeV fr = f.getRightCofactor(v),
+           gr = g.getRightCofactor(v); 
+   FddNodeV r = fddXor(fr, gr);
+   if(l == FddNodeV::_zero) return r;
+   // if(l == r) l = FddNode::_one;
+
+   FddNodeVInt* ni = fdduniquify(l(), r(), v);
+   return size_t(ni);
+}
+
+FddNodeV
+BddMgrV::fddOr(const FddNodeV& f, const FddNodeV& g)
+{
+   // cout << endl << f.getLevel() << " " << g.getLevel() << endl;
+   if(f == FddNodeV::_one) return FddNodeV::_one;
+   // cout << "f != 1" << endl;
+   if(g == FddNodeV::_one) return FddNodeV::_one;
+   // cout << "g != 1" << endl;
+   if(f == FddNodeV::_zero) return g;
+   // cout << "f != 0" << endl;
+   if(g == FddNodeV::_zero) return f;
+   // cout << "g != 0" << endl;
+   
+   unsigned v = f.getLevel() > g.getLevel() ? f.getLevel() : g.getLevel();
+   // cout << "testl" << endl;
+   FddNodeV fd = (v == f.getLevel())? f.getLeft():FddNodeV::_zero,
+            gd = (v == g.getLevel())? g.getLeft():FddNodeV::_zero;
+
+   // cout << "testr" << endl;
+   FddNodeV fn = (v == f.getLevel())? f.getRight():f,
+            gn = (v == g.getLevel())? g.getRight():g;
+
+   FddNodeV fp = fd^fn,
+            gp = gd^gn;
+
+
+   FddNodeV r = fddOr(fn, gn);
+
+   FddNodeV p = fddOr(fp, gp);
+
+   FddNodeV l = fddXor(r,p);
+
+
+   if(l == FddNodeV::_zero) return r;
+
+   FddNodeVInt* ni = fdduniquify(l(), r(), v);
+   return size_t(ni);
+}
+
+// FddNode
+// BddMgr::fddAnd(const FddNode& f, const FddNode& g)
+// {
+   
+// }
+
+FddNodeV
+BddMgrV::Bdd2Fdd(const BddNodeV& n){
+
+   //edge case
+   // cout<<"enter Bdd2Fdd"<<endl;
+   // cout<<"n: "<<endl<<n<<endl;
+   if(n == BddNodeV::_zero){
+    //   cout<<"n==0"<<endl;
+      return FddNodeV::_zero; 
+   }
+//    cout<<"n!=0"<<endl;
+   if(n == BddNodeV::_one){
+    //   cout<<"n==1"<<endl;
+      return FddNodeV::_one;
+   }
+//    cout<<"n!=1"<<endl;
+   BddNodeV bl = n.getLeft(),
+            br = n.getRight();
+
+   FddNodeV fl = Bdd2Fdd(bl),
+            fr = Bdd2Fdd(br);
+   FddNodeV fd = fl^fr;
+   if(n.isNegEdge()) fr = ~fr;
+//    cout<<"fl: "<<endl<<fl<<endl;
+//    cout<<"fd: "<<endl<<fd<<endl;
+//    cout<<"fr: "<<endl<<fr<<endl;
+   if(fd == FddNodeV::_zero) return fr;
+
+   unsigned v = n.getLevel();
+   FddNodeVInt* ni = fdduniquify(fd(), fr(), v);
+   return size_t(ni);
+}
+
+BddNodeV
+BddMgrV::Fdd2Bdd(const FddNodeV& n){
+   //edge case
+   // cout<<"enter Bdd2Fdd"<<endl;
+   // cout<<"n: "<<endl<<n<<endl;
+   if(n == FddNodeV::_zero){
+      // cout<<"n==0"<<endl;
+      return BddNodeV::_zero; 
+   }
+   // cout<<"n!=0"<<endl;
+   if(n == FddNodeV::_one){
+      // cout<<"n==1"<<endl;
+      return BddNodeV::_one;
+   }
+   // cout<<"n!=1"<<endl;
+   FddNodeV fd = n.getLeft(),
+            fr = n.getRight();
+   FddNodeV fl = fd^fr;
+   BddNodeV bl = Fdd2Bdd(fl),
+            br = Fdd2Bdd(fr);
+
+   BddNodeV v = getSupport(n.getLevel());
+   return ite(v, bl, br);
+
 }

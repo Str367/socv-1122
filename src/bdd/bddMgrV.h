@@ -14,6 +14,9 @@
 #include "bddNodeV.h"
 #include "myHashMap.h"
 
+//implementations for FDD
+#include "fddNodeV.h"
+
 using namespace std;
 
 class BddNodeV;
@@ -70,6 +73,7 @@ private:
 
 class BddMgrV {
     typedef HashMap<BddHashKeyV, BddNodeVInt*> BddHash;
+    typedef HashMap<BddHashKeyV, FddNodeVInt*> FddHash;
     typedef Cache<BddCacheKeyV, size_t> BddCache;
 
 public:
@@ -84,10 +88,12 @@ public:
 
     // for _supports
     const BddNodeV& getSupport(size_t i) const { return _supports[i]; }
+    const FddNodeV& getFddSupport(size_t i) const { return _fddsupports[i]; }
     size_t getNumSupports() const { return _supports.size(); }
 
     // for _uniqueTable
     BddNodeVInt* uniquify(size_t l, size_t r, unsigned i);
+    FddNodeVInt* fdduniquify(size_t l, size_t r, unsigned i);
 
     // for _bddArr: access by unsigned (ID)
     bool addBddNodeV(unsigned id, size_t nodeV);
@@ -98,9 +104,30 @@ public:
     void forceAddBddNodeV(const string& nodeName, size_t nodeV);
     BddNodeV getBddNodeV(const string& nodeName) const;
 
+    // for _fddArr: access by unsigned (ID)
+    bool addFddNodeV(unsigned id, size_t nodeV);
+    FddNodeV getFddNodeV(unsigned id) const;
+    
+    // for _fddMap: access by string
+    bool addFddNodeV(const string& nodeName, size_t nodeV);
+    void forceAddFddNodeV(const string& nodeName, size_t nodeV);
+    FddNodeV getFddNodeV(const string& nodeName) const;
+
     // Applications
     int evalCube(const BddNodeV& node, const string& vector) const;
     bool drawBdd(const string& nodeName, const string& dotFile) const;
+
+    // operation for fdd
+    FddNodeV fddAnd(const FddNodeV& f, const FddNodeV& g);
+    FddNodeV fddOr(const FddNodeV& f, const FddNodeV& g);
+    FddNodeV fddXor(const FddNodeV& f, const FddNodeV& g);
+    FddNodeV fddNot(const FddNodeV& f);    
+    bool drawFdd(const string& nodeName, const string& dotFile) const;
+
+
+    //transform between Bdd and Fdd
+    FddNodeV Bdd2Fdd(const BddNodeV& n);
+    BddNodeV Fdd2Bdd(const FddNodeV& n);
 
     // For prove
     void buildPInitialState();
@@ -134,8 +161,15 @@ private:
     BddHash _uniqueTable;
     BddCache _computedTable;
 
+    // implement for fdd
+    vector<FddNodeV>  _fddsupports;
+    FddHash          _fdduniqueTable;
+    BddCache         _fddcomputedTable;
+
     BddArr _bddArr;
+    BddArr _fddArr;
     BddMap _bddMap;
+    BddMap _fddMap;
 
     // For prove
     bool _isFixed;

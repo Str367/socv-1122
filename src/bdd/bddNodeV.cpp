@@ -56,6 +56,14 @@ BddNodeV::BddNodeV(size_t v) : _nodeV(v) {
         n->incRefCount();
 }
 
+BddNodeV::BddNodeV(const FddNodeV& n) {
+    BddNodeV b = _BddMgrV->Fdd2Bdd(n);
+    _nodeV     = b();
+    BddNodeVInt* t = getBddNodeVInt();
+    if (t)
+        t->incRefCount();
+}
+
 // Need to check if _nodeV != 0
 BddNodeV::~BddNodeV() {
     BddNodeVInt* n = getBddNodeVInt();
